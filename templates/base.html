@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Work Tracker{% block title %}{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+
+  <nav class="navbar">
+    <a class="nav-brand" href="{{ url_for('index') }}">📋 Work Tracker</a>
+
+    <form class="nav-search" action="{{ url_for('search') }}" method="GET">
+      <input type="text" name="q" placeholder="🔍 Search tasks, pages, notes…" class="nav-search-input"
+             value="{{ request.args.get('q', '') }}" />
+    </form>
+
+    <div class="nav-links">
+      <a href="{{ url_for('index') }}">Today</a>
+      <a href="{{ url_for('settings') }}">Settings</a>
+    </div>
+  </nav>
+
+  <main class="container">
+
+    <!-- Flash messages (success/error notifications) -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+
+  </main>
+
+</body>
+</html>

@@ -1,0 +1,5 @@
+.env
+token_cache.json
+work_tracker.db
+__pycache__/
+*.pyc

@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %} — Settings{% endblock %}
+
+{% block content %}
+
+<h1>Settings</h1>
+
+<!-- ── Browser Domain Filter ──────────────────────────────────────────── -->
+<section class="settings-section">
+  <h2>Browser History Tracking</h2>
+  <p>
+    Enter the domains you want to track, separated by commas.<br />
+    <small>Example: <code>github.com, jira.atlassian.net, confluence.company.com, stackoverflow.com</code></small><br />
+    <small>Leave blank to track <strong>all</strong> websites.</small>
+  </p>
+
+  <form method="POST" action="{{ url_for('settings') }}">
+    <textarea
+      name="tracked_domains"
+      rows="4"
+      class="input-field"
+      placeholder="github.com, jira.example.com, confluence.example.com"
+    >{{ tracked_domains }}</textarea>
+    <button type="submit" class="btn btn-primary">Save Settings</button>
+  </form>
+</section>
+
+<!-- ── Microsoft Setup Guide ──────────────────────────────────────────── -->
+<section class="settings-section">
+  <h2>Microsoft Integration Setup</h2>
+  <p>To sync Outlook emails and Teams messages, you need to register an app in Azure.</p>
+  <ol class="setup-steps">
+    <li>Go to <strong>portal.azure.com</strong> → Azure Active Directory → App registrations → <em>New registration</em></li>
+    <li>Name: <code>Work Tracker</code> — Account type: <em>Single tenant</em></li>
+    <li>Under <strong>API permissions</strong>, add these Delegated permissions:
+      <ul>
+        <li><code>User.Read</code></li>
+        <li><code>Mail.Read</code></li>
+        <li><code>Chat.Read</code></li>
+        <li><code>offline_access</code></li>
+      </ul>
+    </li>
+    <li>Copy the <strong>Application (client) ID</strong> and <strong>Directory (tenant) ID</strong></li>
+    <li>Add them to your <code>.env</code> file:
+      <pre>AZURE_CLIENT_ID=paste-client-id-here
+AZURE_TENANT_ID=paste-tenant-id-here</pre>
+    </li>
+    <li>The first time you click <strong>Sync</strong>, a login URL will appear in your terminal — open it and sign in with your work account.</li>
+  </ol>
+</section>
+
+{% endblock %}

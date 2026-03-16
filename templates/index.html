@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% block title %} — {{ date_str }}{% endblock %}
+
+{% block content %}
+
+<!-- ── Date Navigation ──────────────────────────────────────────────── -->
+<div class="date-nav">
+  <a class="btn btn-secondary" href="{{ url_for('day_view', date_str=prev_day) }}">← Previous</a>
+  <h1 class="date-heading">
+    {% if date_str == today %}Today &mdash; {{ date_str }}{% else %}{{ date_str }}{% endif %}
+  </h1>
+  <a class="btn btn-secondary {% if date_str == today %}btn-disabled{% endif %}"
+     href="{{ url_for('day_view', date_str=next_day) }}">Next →</a>
+</div>
+
+<!-- ── Summary Counts ────────────────────────────────────────────────── -->
+<div class="summary-bar">
+  <span class="badge badge-task">✅ {{ counts.task }} task{{ 's' if counts.task != 1 }}</span>
+  <span class="badge badge-browser">🌐 {{ counts.browser }} browser visit{{ 's' if counts.browser != 1 }}</span>
+  {% if meetings %}
+    <span class="badge badge-meeting">🗓️ {{ meetings|length }} meeting{{ 's' if meetings|length != 1 }}</span>
+  {% endif %}
+</div>
+
+<!-- ── Controls ───────────────────────────────────────────────────────── -->
+<div class="controls">
+  <form method="POST" action="{{ url_for('sync') }}" class="inline-form">
+    <input type="hidden" name="date" value="{{ date_str }}" />
+    <button type="submit" class="btn btn-primary">🔄 Sync This Day</button>
+  </form>
+
+  <details class="add-task-panel">
+    <summary class="btn btn-success">+ Add Task</summary>
+    <form method="POST" action="{{ url_for('add_task') }}" class="task-form">
+      <input type="hidden" name="date" value="{{ date_str }}" />
+      <input type="text" name="title" placeholder="What did you work on?" required class="input-field" />
+      <textarea name="description" placeholder="Details (optional)" rows="2" class="input-field"></textarea>
+      <button type="submit" class="btn btn-success">Save Task</button>
+    </form>
+  </details>
+
+  <!-- EOD Standup Generator -->
+  <details class="standup-panel">
+    <summary class="btn btn-standup">📋 EOD Summary</summary>
+    <div class="standup-content">
+      <p class="standup-hint">Copy and paste this into Teams or email:</p>
+      <textarea class="standup-text" rows="20" readonly>{{ standup }}</textarea>
+    </div>
+  </details>
+</div>
+
+<!-- ── Two-column layout ─────────────────────────────────────────────── -->
+<div class="page-layout">
+
+  <!-- ── Timeline ──────────────────────────────────────────────────────── -->
+  <section class="timeline">
+    {% if not timeline %}
+      <div class="empty-state">
+        <p>Nothing logged for this day yet.</p>
+        <p>Click <strong>Sync This Day</strong> to pull Chrome history.</p>
+      </div>
+    {% else %}
+      {% for event in timeline %}
+
+        {% if event.type == 'browser_group' %}
+          <details class="timeline-item timeline-browser {% if event.is_meeting %}timeline-meeting{% endif %} timeline-group">
+            <summary class="group-summary">
+              <div class="timeline-time">{{ format_time(event.time) }}</div>
+              <div class="timeline-icon">{% if event.is_meeting %}🗓️{% else %}🌐{% endif %}</div>
+              <div class="timeline-content">
+                <div class="timeline-title">
+                  {{ event.domain }}
+                  <span class="duration-badge">{{ event.duration_display }}</span>
+                  <span class="page-count-badge">{{ event.count }} pages ▾</span>
+                  {% if event.is_meeting %}<span class="meeting-badge">Meeting</span>{% endif %}
+                </div>
+              </div>
+            </summary>
+            <div class="group-pages">
+              {% for page in event.pages %}
+                <div class="group-page-item">
+                  <span class="group-page-time">{{ format_time(page.time) }}</span>
+                  <span class="group-page-title">{{ page.title }}</span>
+                  {% if page.duration_display %}<span class="duration-badge">{{ page.duration_display }}</span>{% endif %}
+                  {% if page.is_meeting %}<span class="meeting-badge">Meeting</span>{% endif %}
+                </div>
+              {% endfor %}
+            </div>
+          </details>
+
+        {% else %}
+          <div class="timeline-item timeline-{{ event.type }}">
+            <div class="timeline-time">{{ format_time(event.time) }}</div>
+            <div class="timeline-icon">
+              {% if event.type == 'task' %}✅
+              {% elif event.is_meeting is defined and event.is_meeting %}🗓️
+              {% else %}🌐{% endif %}
+            </div>
+            <div class="timeline-content">
+              <div class="timeline-title">
+                {{ event.title }}
+                {% if event.type == 'browser' and event.duration_display %}
+                  <span class="duration-badge">{{ event.duration_display }}</span>
+                {% endif %}
+                {% if event.is_meeting is defined and event.is_meeting %}
+                  <span class="meeting-badge">Meeting</span>
+                {% endif %}
+              </div>
+              {% if event.detail %}
+                <div class="timeline-detail">{{ event.detail }}</div>
+              {% endif %}
+              {% if event.type == 'task' and event.id %}
+                <form method="POST" action="{{ url_for('delete_task', task_id=event.id) }}" class="delete-form">
+                  <input type="hidden" name="date" value="{{ date_str }}" />
+                  <button type="submit" class="btn-delete" onclick="return confirm('Delete this task?')">Delete</button>
+                </form>
+              {% endif %}
+            </div>
+          </div>
+        {% endif %}
+
+      {% endfor %}
+    {% endif %}
+  </section>
+
+  <!-- ── Sidebar ───────────────────────────────────────────────────────── -->
+  <aside class="sidebar">
+
+    <!-- Daily Focus -->
+    <div class="sidebar-card">
+      <h2 class="sidebar-title">📊 Daily Focus</h2>
+      <p class="sidebar-total">Total tracked: <strong>{{ total_time }}</strong></p>
+      <div class="site-list">
+        {% for site in site_summary %}
+          <div class="site-row {% if site.minutes == 0 %}site-inactive{% endif %}">
+            <div class="site-name">{{ site.name }}</div>
+            <div class="site-bar-wrap">
+              <div class="site-bar" style="width: {{ site.pct }}%"></div>
+            </div>
+            <div class="site-time">{{ site.display }}</div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Meetings -->
+    {% if meetings %}
+    <div class="sidebar-card sidebar-card-gap">
+      <h2 class="sidebar-title">🗓️ Meetings ({{ meetings|length }})</h2>
+      <div class="meeting-list">
+        {% for m in meetings %}
+          <div class="meeting-item">
+            <span class="meeting-time">{{ format_time(m.visit_time) }}</span>
+            <span class="meeting-title">{{ m.title }}</span>
+            {% if m.duration_display %}<span class="duration-badge">{{ m.duration_display }}</span>{% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Daily Notes -->
+    <div class="sidebar-card sidebar-card-gap">
+      <h2 class="sidebar-title">📝 Daily Notes</h2>
+      <form method="POST" action="{{ url_for('save_note') }}">
+        <input type="hidden" name="date" value="{{ date_str }}" />
+        <textarea name="content" rows="5" class="input-field notes-field"
+                  placeholder="Quick notes, reminders, meeting takeaways…">{{ note }}</textarea>
+        <button type="submit" class="btn btn-secondary notes-save-btn">Save Note</button>
+      </form>
+    </div>
+
+  </aside>
+</div>
+
+{% endblock %}

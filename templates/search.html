@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %} — Search{% endblock %}
+
+{% block content %}
+
+<div class="search-page">
+  <h1>Search</h1>
+
+  <form class="search-form" action="{{ url_for('search') }}" method="GET">
+    <input type="text" name="q" value="{{ query }}" placeholder="Search tasks, pages, notes…"
+           class="input-field search-input" autofocus />
+    <button type="submit" class="btn btn-primary">Search</button>
+  </form>
+
+  {% if query %}
+    <p class="search-meta">
+      {% if results %}
+        {{ results|length }} result{{ 's' if results|length != 1 }} for <strong>"{{ query }}"</strong>
+      {% else %}
+        No results for <strong>"{{ query }}"</strong>
+      {% endif %}
+    </p>
+
+    <div class="search-results">
+      {% for result in results %}
+        <a class="search-result-item" href="{{ url_for('day_view', date_str=result.date) }}">
+          <div class="search-result-left">
+            <span class="search-result-icon">
+              {% if result.type == 'task' %}✅
+              {% elif result.type == 'browser' %}🌐
+              {% elif result.type == 'note' %}📝
+              {% endif %}
+            </span>
+            <div>
+              <div class="search-result-title">{{ result.title }}</div>
+              {% if result.detail %}
+                <div class="search-result-detail">{{ result.detail[:120] }}{% if result.detail|length > 120 %}…{% endif %}</div>
+              {% endif %}
+            </div>
+          </div>
+          <div class="search-result-date">{{ result.date }}</div>
+        </a>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+</div>
+
+{% endblock %}
